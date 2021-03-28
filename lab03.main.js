@@ -1,26 +1,15 @@
-// Update this constant with your ServiceNow credentials
+
 const options = {
-  url: 'https://dev77885.service-now.com/',
+  url: 'https://dev103808.service-now.com',
   username: 'admin',
-  password: 'cRqjB3yLBm4Z'
+  password: '4dNpA6EZrsnK',
+  serviceNowTable: 'change_request'
 };
 
-
-/**
- * Import the Node.js request package.
- * See https://www.npmjs.com/package/request
- */
+// Import built-in Node.js package path.
+const path = require('path');
 const request = require('request');
-
-
-// We'll use this regular expression to verify REST API's HTTP response status code.
 const validResponseRegex = /(2\d\d)/;
-
-// Use JSDoc to create a JSDoc data type for an IAP callback.
-// Call the new type iapCallback.
-// Notice iapCallback is a data-first callback.
-
-
 
 /**
  * @callback iapCallback
@@ -87,14 +76,21 @@ function isHibernating(response) {
  * @param {error} callback.error - The error property of callback.
  */
 function processRequestResults(error, response, body, callback) {
-  /**
-   * You must build the contents of this function.
-   * Study your package and note which parts of the get()
-   * and post() functions evaluate and respond to data
-   * and/or errors the request() function returns.
-   * This function must not check for a hibernating instance;
-   * it must call function isHibernating.
-   */
+     let callbackError = null;
+
+    if (error) {
+      console.error('Error present.');
+      callbackError = error;
+    } else if (!validResponseRegex.test(response.statusCode)) {
+      console.error('Bad response code.');
+      callbackError = response;
+    } else if (isHibernating(response)) {
+      callbackError = 'Service Now instance is hibernating';
+      console.error(callbackError);
+    } else {
+      callbackData = response;
+    }
+    return callback(callbackData, callbackError);
 }
 
 
@@ -120,13 +116,18 @@ function sendRequest(callOptions, callback) {
     uri = constructUri(callOptions.serviceNowTable, callOptions.query);
   else
     uri = constructUri(callOptions.serviceNowTable);
-  /**
-   * You must build the requestOptions object.
-   * This is not a simple copy/paste of the requestOptions object
-   * from the previous lab. There should be no
-   * hardcoded values.
-   */
-  const requestOptions = {};
+ 
+  const requestOptions = {
+    method: callOptions.method,
+    auth: {
+      user: options.username,
+      pass: options.password,
+    },
+    baseUrl: options.url,
+    uri: uri,
+  };
+  
+  
   request(requestOptions, (error, response, body) => {
     processRequestResults(error, response, body, (processedResults, processedError) => callback(processedResults, processedError));
   });
